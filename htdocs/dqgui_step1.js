@@ -138,14 +138,14 @@ function loadFieldsByRemote(type, catId, remoteFieldData, cache, fake,fieldOrder
         oCell.setAttribute("valign","top");
         oCell.setAttribute("class",type+"SelectCell fieldsSelect");
         oCell.setAttribute("id",type+"SelectCell_" + remoteFieldData[i][0]);
-        oCell.setAttribute("title", decodeHTMLEntities(remoteFieldData[i][2]));
+        oCell.setAttribute("title", decodeHTMLEntities(remoteFieldData[i][1]));
 
         //oCell.setAttribute("title",remoteFieldData[i][2]);
 
         //create the checkbox and assign the event handler
         var oCheckbox=addNewElement("INPUT", type+"SelectCheckbox", "checkbox");
         oCheckbox.id=type+"Select_"+remoteFieldData[i][0];
-        oCheckbox.setAttribute("title",decodeHTMLEntities(remoteFieldData[i][2]));
+        oCheckbox.setAttribute("title",decodeHTMLEntities(remoteFieldData[i][1]));
         oCheckbox.setAttribute("class",type+"SelectCheckbox fieldsSelect");
         if(stepNumber==1){
             // handled by jQuery on fieldSelectCell
@@ -159,7 +159,7 @@ function loadFieldsByRemote(type, catId, remoteFieldData, cache, fake,fieldOrder
         }
 
         //create the text node
-        var tText=document.createTextNode(remoteFieldData[i][1]);
+        var tText=document.createTextNode(remoteFieldData[i][2]);
 
         oCell.appendChild(oCheckbox);
         oCell.appendChild(tText);
@@ -200,8 +200,30 @@ function loadCategoriesByRemote(categories){
 
 //checkAllFields adds/removes all the fields to the selected fields box
 function checkAllFields(status){
+   /*for(var fieldId in categoryFields[fieldsActiveCategoryId]){
+        var oCheckbox=document.getElementById("fieldsSelect_"+fieldId);
+        if(oCheckbox.checked!=status){
+           oCheckbox.checked=status;
+            var oNewRow=addFieldToSelected("fieldsSelect_"+fieldId, status, true);
+        }
+    }*/
+   
+   var sortedById= new Array();
+    
    for(var fieldId in categoryFields[fieldsActiveCategoryId]){
         var oCheckbox=document.getElementById("fieldsSelect_"+fieldId);
+        if(oCheckbox.checked!=status){
+            
+            sortedById.push(fieldId);
+        }
+    }
+    
+    sortedById.sort();
+
+    for(var i=0; i<sortedById.length; i++) {
+    var fieldId = sortedById[i];
+    var oCheckbox=document.getElementById("fieldsSelect_"+fieldId);
+        
         if(oCheckbox.checked!=status){
            oCheckbox.checked=status;
             var oNewRow=addFieldToSelected("fieldsSelect_"+fieldId, status, true);

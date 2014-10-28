@@ -40,9 +40,12 @@ set_include_path(get_include_path().":../project/libraries:../php/libraries:");
 require_once "Utility.class.inc";
 
 // settings
-$columnThreshhold = Utility::getColumnThresholdCount();
+//$columnThreshhold = Utility::getColumnThresholdCount();
+$columnThreshhold = 250;
 $quatTableBasename = 'quat_table_';
 $quatTableCounter = 1;
+
+print Utility::getColumnThresholdCount();
 
 // create an NDB client 
 require_once "../php/libraries/NDB_Client.class.inc";
@@ -81,7 +84,7 @@ if(is_array($dataQueryTables) && count($dataQueryTables)) {
         */
 
         //$db->update('parameter_type', array('CurrentGUITable'=>null), array('CurrentGUITable'=>$table['CurrentGUITable']));
-        print "At: $query, memory: " . memory_get_usage() . "\n";
+        //print "At: $query, memory: " . memory_get_usage() . "\n";
     }
     unset($table);
 }
@@ -134,7 +137,7 @@ for($idx=0; $idx<$countParameterTypes; $idx++) {
         $createSQL = "CREATE TABLE $nextTableName_running (SessionID int not null primary key, $createSQL)";
         $updateQuatSQL = "UPDATE parameter_type_running SET CurrentGUITable=" . $db->quote($nextTableName) . " WHERE ParameterTypeID IN (" . join(',', $parameterTypesForQuat) . ')';
         // be more aggressive -- insert every candidate who isn't cancelled
-        $insertSQL = "INSERT INTO $nextTableName_running (SessionID) SELECT s.ID from session s JOIN candidate c USING (CandID) WHERE c.Active='Y' AND s.Active='Y' AND c.CenterID IN (2, 3, 4, 5) AND s.Current_stage <> 'Recycling Bin' AND c.PSCID <> 'scanner'";
+        $insertSQL = "INSERT INTO $nextTableName_running (SessionID) SELECT s.ID from session s JOIN candidate c USING (CandID) WHERE c.Active='Y' AND s.Active='Y' AND c.CenterID IN (1, 2, 3, 4, 5, 6) AND s.Current_stage <> 'Recycling Bin' AND c.PSCID <> 'scanner'";
         $quatTableCounter++;
         $nextTableName = $quatTableBasename . $quatTableCounter;
         $nextTableName_running = $nextTableName . "_running";
