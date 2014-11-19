@@ -45,7 +45,11 @@ $columnThreshhold = 250;
 $quatTableBasename = 'quat_table_';
 $quatTableCounter = 1;
 
+<<<<<<< Updated upstream
 print Utility::getColumnThresholdCount();
+=======
+print_r($columnThreshold);
+>>>>>>> Stashed changes
 
 // create an NDB client 
 require_once "../php/libraries/NDB_Client.class.inc";

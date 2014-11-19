@@ -67,26 +67,24 @@ class NDB_Menu_Filter_Imaging_Browser extends NDB_Menu_Filter
             END";
         $T1PassSubquery = "CASE 
             COALESCE((
-                SELECT MIN(files_qcstatus.QCStatus+0) 
+                SELECT count(*) >= 1 
                 FROM files JOIN files_qcstatus 
                 USING (FileID) 
-                WHERE files.SessionID=s.ID AND files.AcquisitionProtocolID=44 
+                WHERE files.SessionID=s.ID AND files.AcquisitionProtocolID=54 and QCStatus='Pass'
                 GROUP BY files.SessionID), '')
-            WHEN '' THEN ''
+            WHEN '' THEN 'Failed'
             WHEN 1 THEN 'Passed'
-            WHEN 2 THEN 'Failed'
             END
             ";
         $T2PassSubquery = "CASE 
             COALESCE((
-                SELECT MIN(files_qcstatus.QCStatus+0) 
+                SELECT count(*) >= 1 
                 FROM files JOIN files_qcstatus 
                 USING (FileID) 
-                WHERE files.SessionID=s.ID AND files.AcquisitionProtocolID=45 
+                WHERE files.SessionID=s.ID AND files.AcquisitionProtocolID=58 and QCStatus='Pass'
                 GROUP BY files.SessionID), '')
-            WHEN '' THEN ''
+            WHEN '' THEN 'Failed'
             WHEN 1 THEN 'Passed'
-            WHEN 2 THEN 'Failed'
             END
             ";
 
@@ -137,8 +135,8 @@ class NDB_Menu_Filter_Imaging_Browser extends NDB_Menu_Filter
             'First_Acq_Date',
             'Last_QC',
             'New_Data',
-            'T1_Passed',
-            'T2_Passed',
+            'MPRAGE_Passed',
+            'DTI_Passed',
             'Links'
         );
        
