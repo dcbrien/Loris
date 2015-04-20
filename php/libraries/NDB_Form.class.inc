@@ -10,11 +10,6 @@
  * @license  http://www.gnu.org/licenses/gpl-3.0.txt GPLv3
  * @link     https://www.github.com/aces/Loris/
  */
-require_once "NDB_Page.class.inc";
-require_once "PEAR.php";
-require_once "HTML/QuickForm.php";
-require_once 'HTML/QuickForm/Renderer/ArraySmarty.php';
-
 /**
  * Base Form class that is overwritten by specific form pages
  *
@@ -68,7 +63,7 @@ class NDB_Form extends NDB_Page
         if (class_exists("NDB_Form_$name")) {
             $class = "NDB_Form_$name";
         } else {
-            return PEAR::raiseError("The form class ($name) is not defined.");
+            throw new Exception("The form class ($name) is not defined.");
         }
 
         // create a form instance
@@ -78,35 +73,20 @@ class NDB_Form extends NDB_Page
         $obj->_setupPage($name, $page, $identifier, null, 'test_form');
 
         $access = $obj->_hasAccess();
-        if (Utility::isErrorX($access)) {
-            return PEAR::raiseError(
-                "NDB_Form::factory() access: ".$access->getMessage()
-            );
-        }
 
         // check that user has access
         if ($access == false) {
-            return PEAR::raiseError("You do not have access to this page.", 403);
+            throw new Exception("You do not have access to this page.", 403);
         }
 
         if (method_exists($obj, $page)) {
-            $success = $obj->$page();
-            if (Utility::isErrorX($success)) {
-                return PEAR::raiseError(
-                    "NDB_Form::factory() page: ".$success->getMessage()
-                );
-            }
+            $success       = $obj->$page();
             $obj->template = $page;
         } elseif (method_exists($obj, $name)) {
-            $success = $obj->$name();
-            if (Utility::isErrorX($success)) {
-                return PEAR::raiseError(
-                    "NDB_Form::factory() name: ".$success->getMessage()
-                );
-            }
+            $success       = $obj->$name();
             $obj->template = $name;
         } else {
-            return PEAR::raiseError("Form does not exist: $name $page");
+            throw new Exception("Form does not exist: $name $page", 404);
         }
 
         return $obj;
@@ -121,9 +101,6 @@ class NDB_Form extends NDB_Page
      *
      *     // create user object
      *     $user =& User::singleton();
-     *     if(Utility::isErrorX($user)) {
-     *         return PEAR::raiseError("User Error: ".$user->getMessage());
-     *     }
      *
      *     return $user->hasPermission('superuser');
      *
@@ -146,15 +123,16 @@ class NDB_Form extends NDB_Page
      * saves the validated data into the database
      *
      * @return void
-     * @throws PEAR_Error
      * @access public
      */
     function save()
     {
         if ($this->form->validate()) {
             $success = $this->form->process(array(&$this, "_save"), false);
+            // Just in case QuickForm returned a PEAR error instead of an
+            // exception..
             if (Utility::isErrorX($success)) {
-                return PEAR::raiseError("NDB_Form::save(): ".$success->getMessage());
+                throw new Exception($success->getMessage());
             }
         }
     }
@@ -185,9 +163,6 @@ class NDB_Form extends NDB_Page
         }
 
         $success = $this->_process($values);
-        if (Utility::isErrorX($success)) {
-            return PEAR::raiseError("NDB_Form::_save(): ".$success->getMessage());
-        }
     }
 
 

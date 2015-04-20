@@ -53,11 +53,9 @@ fi
 
 # Banner
 cat <<BANNER
-
 ---------------------------------------------------------------------
                    LORIS Installation Script
 ---------------------------------------------------------------------
-
 BANNER
 
 # Check that bash is being used
@@ -75,47 +73,48 @@ else
     exit 2;
 fi
 
-if [[ -n $(which pear) ]]; then
+if [[ -n $(which composer) ]]; then
     echo ""
-    echo "PEAR appears to be installed."
+    echo "PHP Composer appears to be installed."
+    composer_scr="composer install --no-dev"
 else
-    echo ""
-    echo "PEAR does not appear to be installed. Aborting."
-    exit 2;
+    echo "PHP Composer does not appear to be installed. Attempting to install now..."
+    curl -sS https://getcomposer.org/installer | php
+    mv composer.phar composer
+    composer_scr="tools/composer install --no-dev"
+    if [[ -f composer ]]; then
+        echo ""
+        echo "PHP Composer successfully installed."
+    else
+        echo ""
+        echo "PHP Composer failed to install. Aborting."
+        exit 2;
+    fi
 fi
 
 cat <<QUESTIONS
-
 Please answer the following questions. You'll be asked:
-
   1) Your project directory name from section A) of the Installation Guide.
      (Will be used to modify the paths for Imaging data in the generated
      config.xml file for LORIS, and may also be used to automatically
      create/install apache config files.)
-
   2) A name for the MySQL Database. This should be
      a simple identifier such as "Loris" or "Abc_Def".
      This database will be created later on so please make sure
      a database with the same name does not already exist.
-
   3) The hostname for the machine where the MySQL server will run on
      (this is where we'll create the database).
-
   4) The MySQL username that the Loris system will use to connect
      to this server and database; this MySQL account will be
      created later on so please make sure a user with the same name
      does not already exist.
-
   5) The password for this username (it will be set later on).
-
   6) Another password for the 'admin' account of the Loris DB
      (it will also be set later on).
-
   7) Credentials of an existing root MySQL account to install the
      default schema. This will only be used once, to create and
      populate the default tables, and to grant privileges to the
      newly created MySQL user in part 3).
-
 QUESTIONS
 
 
@@ -162,6 +161,9 @@ mkdir -p ../project ../project/libraries ../project/instruments ../project/templ
 
 # Setting 777 permissions for templates_c
 chmod 777 ../smarty/templates_c
+
+# Changing group to www-data to give permission to create directories in Document Repository module
+sudo chown www-data.www-data ../modules/document_repository/user_uploads
 
 # Set the proper permission for the tools/logs directory:
 if [ -d logs ]; then
@@ -319,8 +321,9 @@ echo "Creating/populuating database tables from schema."
 echo ""
 mysql $mysqldb -h$mysqlhost --user=$mysqlrootuser --password="$mysqlrootpass" -A 2>&1 < ../SQL/0000-00-00-schema.sql
 echo "Updating Loris admin user's password."
-mysql $mysqldb -h$mysqlhost --user=$mysqluser --password="$mysqlpass" -A -e "UPDATE users SET Password_MD5=CONCAT('aa', MD5('aa$lorispass')), Pending_approval='N' WHERE ID=1"
-
+pw_expiry=$(date --date="6 month" +%Y-%m-%d)
+echo "Updating admin password reset date to be $pw_expiry"
+mysql $mysqldb -h$mysqlhost --user=$mysqluser --password="$mysqlpass" -A -e "UPDATE users SET Password_MD5=CONCAT('aa', MD5('aa$lorispass')), Password_expiry='$pw_expiry', Pending_approval='N' WHERE ID=1"
 
 
 echo ""
@@ -343,57 +346,75 @@ mysql $mysqldb -h$mysqlhost --user=$mysqluser --password="$mysqlpass" -A -e "UPD
 mysql $mysqldb -h$mysqlhost --user=$mysqluser --password="$mysqlpass" -A -e "UPDATE Config SET Value='/data/$projectname/data/' WHERE ConfigID=(SELECT ID FROM ConfigSettings WHERE Name='MRICodePath')"
 
 
+# Install external libraries using composer
+cd ..
+eval $composer_scr
+cd tools
 
-echo ""
+if type "lsb_release" > /dev/null 2>&1; then
+  os_distro=$(lsb_release -si)
+elif type "facter" > /dev/null 2>&1; then
+  os_distro=$(facter operatingsystem)
+else
+  os_distro="unknown"
+fi
+
+if [ $os_distro = "Ubuntu" ]; then
+  echo "Ubuntu distribution detected."
+  # for CentOS, the log directory is called httpd
+  logdirectory=/var/log/apache2
+  while true; do
+      read -p "Would you like to automatically create/install apache config files? (Works for Ubuntu 14.04 default Apache installations) [yn] " yn
+      echo $yn | tee -a $LOGFILE > /dev/null
+      case $yn in
+          [Yy]* )
+             if [ -f /etc/apache2/sites-available/$projectname ]; then
+                 echo "Apache appears to already be configured for $projectname. Aborting\n"
+                 exit 1
+             fi;
+             # Need to pipe to sudo tee because > is done as the logged in user, even if run through sudo
+             sed -e "s#%LORISROOT%#$RootDir/#g" \
+                 -e "s#%PROJECTNAME%#$projectname#g" \
+  		 -e "s#%LOGDIRECTORY%#$logdirectory#g" \
+                 < ../docs/config/apache2-site | sudo tee /etc/apache2/sites-available/$projectname.conf > /dev/null
+             sudo ln -s /etc/apache2/sites-available/$projectname.conf /etc/apache2/sites-enabled/$projectname.conf
+             sudo a2dissite 000-default
+             sudo a2ensite $projectname.conf
+             break;;
+          [Nn]* )
+             echo "Not configuring apache."
+             break;;
+          * ) echo "Please enter 'y' or 'n'."
+      esac
+  done;
+elif [ $os_distro = "CentOS" ]; then
+echo "CentOS distribution detected."
+# for CentOS, the log directory is called httpd
+logdirectory=/var/log/httpd
 while true; do
-    read -p "Would you like to install PEAR libraries (affects system files)? [yn] " yn
+    read -p "Would you like to automatically create/install apache config files? (In development for CentOS 6.5) [yn] " yn
     echo $yn | tee -a $LOGFILE > /dev/null
     case $yn in
         [Yy]* )
-            echo "Installing PEAR libraries (may prompt for sudo password)."
-            echo ""
-            echo "Upgrading PEAR..."
-            sudo pear upgrade-all
-            echo "Installing PEAR Benchmark..."
-            sudo pear install Benchmark
-            echo "Installing PEAR HTML_Common..."
-            sudo pear install HTML_Common
-            echo "Installing PEAR HTML_QuickForm..."
-            sudo pear install HTML_QuickForm
-            echo "Configuring PEAR preferred state..."
-            sudo pear config-set preferred_state beta
-            echo "Installing PEAR Mail..."
-            sudo pear install Mail
-            echo "Installing PEAR Pager..."
-            sudo pear install Pager
-            echo "Installing PEAR Structures_Graph..."
-            sudo pear install Structures_Graph
-            break;;
-        [Nn]* )
-            echo "Not installing PEAR libraries."
-            break;;
-        * ) echo "Please enter 'y' or 'n'."
-   esac
-done;
-
-
-echo ""
-while true; do
-    read -p "Would you like to automatically create/install apache config files? (Works for Ubuntu 14.04 default Apache installations) [yn] " yn
-    echo $yn | tee -a $LOGFILE > /dev/null
-    case $yn in
-        [Yy]* )
-            if [ -f /etc/apache2/sites-available/$projectname ]; then
+            if [ -f /etc/httpd/sites-available/$projectname ]; then
                 echo "Apache appears to already be configured for $projectname. Aborting\n"
                 exit 1
             fi;
+            # make directories if missing
+            sudo mkdir -p /etc/httpd/sites-available;
+            sudo mkdir -p /etc/httpd/sites-enabled;
 
             # Need to pipe to sudo tee because > is done as the logged in user, even if run through sudo
-            sed -e "s#%LORISROOT%#$RootDir/#g" \
+            sed -e "s#%LORISROOT%#$RootDir#g" \
                 -e "s#%PROJECTNAME%#$projectname#g" \
-                < ../docs/config/apache2-site | sudo tee /etc/apache2/sites-available/$projectname.conf > /dev/null
-            sudo a2dissite 000-default
-            sudo a2ensite $projectname
+                -e "s#%LOGDIRECTORY%#$logdirectory#g" \
+                < ../docs/config/apache2-site | sudo tee /etc/httpd/sites-enabled/$projectname.conf > /dev/null
+            sudo ln -s /etc/httpd/sites-available/$projectname.conf /etc/httpd/sites-enabled/$projectname.conf
+            
+            # Insert a line in main apache config file to include new file
+            sudo sed -i '221 a\Include /etc/httpd/sites-available/*.conf' /etc/httpd/conf/httpd.conf
+            
+            sudo service httpd restart
             break;;
         [Nn]* )
             echo "Not configuring apache."
@@ -401,7 +422,9 @@ while true; do
          * ) echo "Please enter 'y' or 'n'."
     esac
 done;
+else
+    echo "$os_distro Linux distribution detected. We currently do not support this. Please configure Apache manually."
+    exit 1
+fi
 
 echo "Installation complete."
-
-

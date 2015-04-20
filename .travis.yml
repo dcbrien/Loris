@@ -1,59 +1,45 @@
 language: php
 
-php: 5.4
+cache:
+    directories:
+        - vendor
+
+php:
+    - 5.4
+    - 5.6
+    - '7'
+
+matrix:
+    allow_failures:
+        - php: '7'
+
+sudo: false
 
 before_install:
-    - sudo apt-get update
-    - "export DISPLAY=:99.0"
-    - "sh -e /etc/init.d/xvfb start"
+    # Start Xvfb in a desktop screen size,
+    # otherwise some tests will fail because the links
+    # are hidden when Selenium tries to find them.
+    - "/sbin/start-stop-daemon --start --quiet --pidfile /tmp/custom_xvfb_99.pid --make-pidfile --background --exec /usr/bin/Xvfb -- :99 -ac -screen 0 1600x1200x16"
+    #- "export DISPLAY=:99.0"
+    #- "sh -e /etc/init.d/xvfb start"
 
 install:
     # Install composer modules
     - composer install --dev
-    # List of PEAR modules installed by install script
-    - pear config-get php_dir
-    # Currently commented out because all we do is run
-    # PHPCS and php -l on the code from Travis.
-    #- pear upgrade
-    - pear install Benchmark
-    #- pear install Config
-    #- pear install File_Archive
-    #- pear install HTML_Common
-    - pear install HTML_QuickForm
-    - pear config-set preferred_state beta
-    #- pear install HTML_QuickForm2
-    #- pear install Mail
-    #- pear install Mail_Mime
-    #- pear install Net_SMTP
-    #- pear install OLE
-    - pear install Pager
-    #- pear install PHPDocumentor
-    #- pear install XML_Parser
-
-      # Running PHPCS is part of the test, even though
-      # Loris itself doesn't depend on it.
-    - pear install PHP_CodeSniffer
-
-      # Travis-CI requires this.
     - phpenv rehash
 
-      # Download a Selenium Web Driver release
-    - wget "http://selenium-release.storage.googleapis.com/2.44/selenium-server-standalone-2.44.0.jar"
+    # Install jslint
+    - npm install -g jslint
 
-    # Install requirements for php-fpm as per Travis DOCs
-    - sudo apt-get install apache2 libapache2-mod-fastcgi smarty3
-    # /usr/share/php gets obliterated from the path by phpenv, so make
-    # a symlink to fake it.
-    - ln -s /usr/share/php/smarty3 ~/.phpenv/versions/$(phpenv version-name)/pear
-    - sudo cp ~/.phpenv/versions/$(phpenv version-name)/etc/php-fpm.conf.default ~/.phpenv/versions/$(phpenv version-name)/etc/php-fpm.conf
-    - sudo a2enmod rewrite actions fastcgi alias
-    - sudo a2dismod php5
-    - echo "cgi.fix_pathinfo = 1" >> ~/.phpenv/versions/$(phpenv version-name)/etc/php.ini
-    - ~/.phpenv/versions/$(phpenv version-name)/sbin/php-fpm
+      # Download a Selenium Web Driver release
+    - wget "http://selenium-release.storage.googleapis.com/2.45/selenium-server-standalone-2.45.0.jar"
+
+    - php -S localhost:8000 -t htdocs 2>1 > /dev/null &
+
     # Start Selenium and redirect Selenium WebDriver
     # output to /dev/null so that it doesn't flood the
     # screen in the middle of our other tests
-    - DISPLAY=:99.0 java -jar selenium-server-standalone-2.44.0.jar > /dev/null &
+    - DISPLAY=:99.0 java -jar selenium-server-standalone-2.45.0.jar > /dev/null &
 
 before_script:
     # Set up the Loris environment
@@ -72,63 +58,71 @@ before_script:
           -e "s/%DATABASE%/LorisTest/g"
           < docs/config/config.xml > project/config.xml
     - mysql LorisTest -e "UPDATE Config SET Value='$(pwd)/' WHERE ConfigID=(SELECT ID FROM ConfigSettings WHERE Name='base')"
-
-      # Configure apache
-    - sudo cp -f docs/config/apache2-fastcgi /etc/apache2/sites-available/default
-    - sudo sed -e "s?%TRAVIS_BUILD_DIR%?$(pwd)/htdocs?g" --in-place /etc/apache2/sites-available/default
-    - sudo service apache2 restart
+    - mysql LorisTest -e "UPDATE Config SET Value='http://localhost:8000' WHERE ConfigID=(SELECT ID FROM ConfigSettings WHERE Name='url')"
 
 script:
     # Run PHP -l on everything to ensure there's no syntax
     # errors.
-    - for i in `ls php/libraries/*.class.inc`;
+    - for i in `ls php/libraries/*.class.inc modules/*/php/* modules/*/ajax/* htdocs/*.php htdocs/*/*.php`;
       do
         php -l $i || exit $?;
       done
+    # Run unit tests to make sure functions still do what they should.
+    - vendor/bin/phpunit test/unittests/
+
     # Run integration tests to make sure everything didn't just
     # break
-    - phpunit test/integrationtests/
-    # Run PHPCS on libraries directory.
-    # Note that everything doesn't pass yet, so instead
-    # do each file that we know passes individually to ensure
-    # no backwards progress..
-    # Eventually, the following should be uncommented and the
-    # file by file invocations deleted..
-    #- phpcs --standard=docs/LorisCS.xml php/libraries
-    - phpunit test/unittests/
-    - phpcs --standard=docs/LorisCS.xml php/libraries/NDB_Config.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/SinglePointLogin.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/NDB_BVL_Instrument_instrument_preview.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/Smarty_hook.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/Database.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/Site.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/MRIFile.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/NDB_Client.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/FeedbackMRI.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/ConflictDetector.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/NDB_BVL_Instrument.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/NDB_BVL_Feedback.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/NDB_Factory.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/NDB_BVL_Battery.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/Log.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/NDB_Menu.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/NDB_Form.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/File_Upload.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/Notify.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/Email.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/NDB_BVL_InstrumentStatus_ControlPanel.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/NDB_BVL_InstrumentStatus.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/CouchDB.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/Message.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/NDB_Breadcrumb.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/Candidate.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/NDB_Caller.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/NDB_Page.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/TimePoint.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/NDB_Menu_Filter.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/UserPermissions.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/NDB_Reliability.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/NDB_Menu_Filter_Form.class.inc
-    - phpcs --standard=docs/LorisCS.xml php/libraries/State.class.inc
-    - phpcs --standard=docs/LorisCS.xml modules/mri_upload/php/NDB_Menu_Filter_mri_upload.class.inc
-    - phpcs --standard=docs/LorisCS.xml modules/mri_upload/php/File_Decompress.class.inc
+    - vendor/bin/phpunit test/integrationtests/
+
+    # Run integration tests for specific modules
+    - vendor/bin/phpunit modules/brainbrowser/test
+    - vendor/bin/phpunit modules/candidate_list/test
+    - vendor/bin/phpunit modules/candidate_parameters/test
+    - vendor/bin/phpunit modules/configuration/test
+    - vendor/bin/phpunit modules/conflict_resolver/test
+    - vendor/bin/phpunit modules/create_timepoint/test
+    - vendor/bin/phpunit modules/dashboard/test
+    - vendor/bin/phpunit modules/data_integrity_flag/test
+    - vendor/bin/phpunit modules/data_team_helper/test
+    - vendor/bin/phpunit modules/datadict/test
+    - vendor/bin/phpunit modules/dicom_archive/test
+    - vendor/bin/phpunit modules/document_repository/test
+    - vendor/bin/phpunit modules/examiner/test
+    - vendor/bin/phpunit modules/final_radiological_review/test
+    - vendor/bin/phpunit modules/genomic_browser/test
+    - vendor/bin/phpunit modules/help_editor/test
+    - vendor/bin/phpunit modules/imaging_browser/test
+    - vendor/bin/phpunit modules/instrument_builder/test
+    - vendor/bin/phpunit modules/instrument_list/test
+    - vendor/bin/phpunit modules/instrument_manager/test
+    - vendor/bin/phpunit modules/mri_upload/test
+    - vendor/bin/phpunit modules/mri_violations/test
+    - vendor/bin/phpunit modules/new_profile/test
+    - vendor/bin/phpunit modules/next_stage/test
+    - vendor/bin/phpunit modules/reliability/test
+    - vendor/bin/phpunit modules/statistics/test
+    - vendor/bin/phpunit modules/survey_accounts/test
+    - vendor/bin/phpunit modules/timepoint_flag/test
+    - vendor/bin/phpunit modules/timepoint_list/test
+    - vendor/bin/phpunit modules/training/test
+    - vendor/bin/phpunit modules/user_accounts/test
+
+    - vendor/bin/phpcs --standard=docs/LorisCS.xml tools/assign_missing_instruments.php
+    # Run PHPCS on the entire libraries directory.
+    - vendor/bin/phpcs --standard=docs/LorisCS.xml php/libraries php/exceptions
+    - vendor/bin/phpcs --standard=docs/LorisCS.xml --extensions=php/php htdocs
+
+    # Run PHPCS on some scripts
+    - vendor/bin/phpcs --standard=docs/LorisCS.xml tools/data_dictionary_builder.php
+
+    # Run PHPCS on specific modules
+    - vendor/bin/phpcs --standard=docs/LorisCS.xml modules/mri_upload/php/NDB_Menu_Filter_mri_upload.class.inc
+    - vendor/bin/phpcs --standard=docs/LorisCS.xml modules/mri_upload/php/File_Decompress.class.inc
+    - vendor/bin/phpcs --standard=docs/LorisCS.xml --extensions=php/php,inc/php modules/genomic_browser
+    - vendor/bin/phpcs --standard=docs/LorisCS.xml --extensions=php/php,inc/php modules/candidate_list
+    - vendor/bin/phpcs --standard=docs/LorisCS.xml --extensions=php/php,inc/php modules/dashboard
+    - vendor/bin/phpcs --standard=docs/LorisCS.xml --extensions=php/php,inc/php modules/examiner
+    - vendor/bin/phpcs --standard=docs/LorisCS.xml --extensions=php/php,inc/php modules/training
+
+    # Run JSLINT on specific scripts
+    - jslint htdocs/js/jquery.dynamictable.js

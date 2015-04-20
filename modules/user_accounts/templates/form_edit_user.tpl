@@ -28,19 +28,27 @@ $(document).ready(function() {
 </script>
 {/literal}
 <form method="post" name="edit_user" >
-
     {if $form.errors}
         <div class="alert alert-danger" role="alert">
             Please ensure that all required fields are filled
         </div>
     {/if}
-	<h3>Password Rules</h3>
-	<ul>
-		<li>The password must be at least 8 characters long</li>
-        <li>The password must contain at least 1 letter, 1 number and 1 character from   !@#$%^&amp;*()</li>
-        <li>The password and the user name must not be the same</li>
-        <li>The password and the email address must not be the same</li>
-	</ul>
+   <div class="panel panel-default">
+      <div class="panel-body">
+	    <h3>Password Rules</h3>
+	    <ul>
+		    <li>The password must be at least 8 characters long</li>
+            <li>The password must contain at least 1 letter, 1 number and 1 character from   !@#$%^&amp;*()</li>
+            <li>The password and the user name must not be the same</li>
+            <li>The password and the email address must not be the same</li>
+        </ul>
+        <h3>Notes</h3>
+        <ul>
+            <li>It is recommended to use an email address as the username, for clarity and uniqueness.</li>
+            <li>When generating a new password, please notify the user by checking 'Send email to user' box below!</li>
+        </ul>
+       </div>
+    </div>
 	<h3>Add/Edit User</h3>
 	<!-- {foreach from=$form.errors item=error key=k}
 	    <ul>
@@ -65,30 +73,18 @@ $(document).ready(function() {
                 </div>
             {/if}
 	    </div>
-        
     <!-- </div> -->
-    <br>
-    <div class="row form-group form-inline">
-    	<label class="col-sm-2">
-    		NOTE:
-    	</label>
-    	<div class="col-sm-10">
-    		<B>When generating a new password, please notify the user by checking 'Send email to user' box!</B>
-    	</div>
-    </div>
     <br>
     {if $form.errors.Password_Group}
     <div class="row form-group form-inline form-inline has-error">
     {else}
     <div class="row form-group form-inline form-inline">
     {/if}
-    	<label class="col-sm-2 form-label">
+    	<label class="col-sm-2">
     		{$form.Password_Group.label}
     	</label>
     	<div class="col-sm-10">
-    		{$form.Password_Group.NA_Password.html} {$form.Password_Group.checkLabel.html}
-            <br>
-            {$form.Password_Group.Password_md5.html}
+    		{$form.Password_Group.html}
     	</div>
         {if $form.errors.Password_Group}
             <div class="col-sm-offset-2 col-xs-12">
@@ -285,14 +281,6 @@ $(document).ready(function() {
     	</label>
     	<div class="col-sm-10">
     		{$form.Pending_approval.html}
-    	</div>
-    </div>
-    <div class="row form-group form-inline">
-    	<label class="col-sm-2">
-    		{$form.Examiner.label}
-    	</label>
-    	<div class="col-sm-10">
-    		{$form.Examiner.html}
     	</div>
     </div>
     <div class="row form-group form-inline">

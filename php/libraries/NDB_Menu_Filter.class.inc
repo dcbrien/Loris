@@ -11,12 +11,6 @@
  * @link     https://www.github.com/aces/Loris-Trunk/
  */
 
-require_once 'Pager/Pager.php';
-require_once 'NDB_Menu.class.inc';
-require_once "HTML/QuickForm.php";
-require_once 'HTML/QuickForm/Renderer/ArraySmarty.php';
-require_once 'HTML/QuickForm/text.php';
-require_once 'HTML/QuickForm/select.php';
 /**
  * Menu class, with filtering
  *
@@ -126,18 +120,12 @@ class NDB_Menu_Filter extends NDB_Menu
      * Calls other member functions to do all the work necessary to create the menu
      *
      * @return void
-     * @throws PEAR_Error
      * @access public
      */
     function setup()
     {
         // setup the menu's variables
         $success = $this->_setupVariables();
-        if (Utility::isErrorX($success)) {
-            return PEAR::raiseError(
-                "NDB_Menu_Filter::setup() setup: ".$success->getMessage()
-            );
-        }
 
         // set the headers if necessary
         if (!is_array($this->headers) || count($this->headers) == 0) {
@@ -156,11 +144,6 @@ class NDB_Menu_Filter extends NDB_Menu
 
         // build the menu
         $success = $this->_build();
-        if (Utility::isErrorX($success)) {
-            return PEAR::raiseError(
-                "NDB_Menu_Filter::setup() build: ".$success->getMessage()
-            );
-        }
 
         return true;
     }
@@ -318,7 +301,11 @@ class NDB_Menu_Filter extends NDB_Menu
             // the filters values remain populated correctly in the front-end,
             // not just in the query..
             $defaults = $this->_getDefaults();
-            $this->_setDefaults(array_merge($defaults, $savedFilters));
+            if (is_array($savedFilters)) {
+                $this->_setDefaults(array_merge($defaults, $savedFilters));
+            } else {
+                $this->_setDefaults($defaults);
+            }
         } else if ($_SERVER['REQUEST_METHOD'] === 'POST'
             && isset($_POST['filter'])
         ) {
@@ -360,34 +347,18 @@ class NDB_Menu_Filter extends NDB_Menu
      * Contructs the menu
      *
      * @return void
-     * @throws PEAR_Error
      * @access private
      */
     function _build()
     {
         // show selection form table
         $success = $this->_setFilterForm();
-        if (Utility::isErrorX($success)) {
-            return PEAR::raiseError(
-                "NDB_Menu_Filter::_build() filter: ".$success->getMessage()
-            );
-        }
 
         // get the list
         $this->list = $this->_getList();
-        if (Utility::isErrorX($this->list)) {
-            return PEAR::raiseError(
-                "NDB_Menu_Filter::_build() list: ".$this->list->getMessage()
-            );
-        }
 
         // show data table with user information and access URLs
         $success = $this->_setDataTable();
-        if (Utility::isErrorX($success)) {
-            return PEAR::raiseError(
-                "NDB_Menu_Filter::_build() table: ".$success->getMessage()
-            );
-        }
     }
 
 
@@ -456,18 +427,12 @@ class NDB_Menu_Filter extends NDB_Menu
      * Returns a list of candidates, users, etc.
      *
      * @return array
-     * @throws PEAR_Error
      * @access private
      */
     function _getList()
     {
         // create DB object
         $DB =& Database::singleton();
-        if (Utility::isErrorX($DB)) {
-            return PEAR::raiseError(
-                "Could not connect to database: ".$DB->getMessage()
-            );
-        }
 
         $qparams = array();
         // add the base query
@@ -499,9 +464,6 @@ class NDB_Menu_Filter extends NDB_Menu
                           ." OFFSET " . (($pageNum-1)*$resultsPerPage);
         $result         = $DB->pselect($query . $limit, $qparams);
 
-        if (Utility::isErrorX($result)) {
-            return PEAR::raiseError("DB Error: ".$result->getMessage());
-        }
         return $result;
     }
 
@@ -609,7 +571,6 @@ class NDB_Menu_Filter extends NDB_Menu
      * Sets the template data for the list of candidates, users, etc.
      *
      * @return void
-     * @throws PEAR_Error
      * @access private
      */
     function _setDataTable()
@@ -623,37 +584,32 @@ class NDB_Menu_Filter extends NDB_Menu
                        'delta'      => 3,
                        'totalItems' => $this->TotalItems,
                       );
-        $pager      = Pager::factory($params);
-        $links      = $pager->getLinks();
-        $this->tpl_data['page_links'] = $links['all'];
+            $pager  = Pager::factory($params);
+            $links  = $pager->getLinks();
+            $this->tpl_data['page_links'] = $links['all'];
 
-        // print out column headings
-        $i = 0;
-        foreach ($this->headers as $header) {
-            $this->tpl_data['headers'][$i]['name'] = $header;
-            // format header
-            $this->tpl_data['headers'][$i]['displayName']
-                = ucwords(str_replace('_', ' ', $header));
-            // set field ordering
-            if (isset($this->filter['order'])) {
-                $this->tpl_data['headers'][$i]['fieldOrder']
-                    = ($this->filter['order']['fieldOrder']
-                        == 'ASC') ? 'DESC' : 'ASC';
+            // print out column headings
+            $i = 0;
+            foreach ($this->headers as $header) {
+                $this->tpl_data['headers'][$i]['name'] = $header;
+                // format header
+                $this->tpl_data['headers'][$i]['displayName']
+                    = ucwords(str_replace('_', ' ', $header));
+                // set field ordering
+                if (isset($this->filter['order'])) {
+                    $this->tpl_data['headers'][$i]['fieldOrder']
+                        = ($this->filter['order']['fieldOrder']
+                        == 'DESC') ? 'ASC' : 'DESC';
+                }
+                $i++;
             }
-            $i++;
-        }
 
-        // get the template data for the table rows
-        if (is_array($this->list) && !empty($this->list)) {
-            // print out data rows
-            $count   = $pager->getOffsetByPageId();
-            $success = $this->_setDataTableRows($count[0]);
-            if (Utility::isErrorX($success)) {
-                return PEAR::raiseError(
-                    "NDB_Filter::_setDataTable(): ".$success->getMessage()
-                );
+            // get the template data for the table rows
+            if (is_array($this->list) && !empty($this->list)) {
+                // print out data rows
+                $count   = $pager->getOffsetByPageId();
+                $success = $this->_setDataTableRows($count[0]);
             }
-        }
     }
 
 
@@ -697,11 +653,9 @@ class NDB_Menu_Filter extends NDB_Menu
     function display()
     {
         // dump the html for the menu
-        $smarty   = new Smarty_neurodb($this->Module);
-        $renderer = new HTML_QuickForm_Renderer_ArraySmarty($smarty);
-        $this->form->accept($renderer);
+        $smarty = new Smarty_neurodb($this->Module);
         $smarty->assign('mode', $this->mode);
-        $smarty->assign('form', $renderer->toArray());
+        $smarty->assign('form', $this->form->toArray());
         $smarty->assign($this->tpl_data);
         $html = $smarty->fetch("menu_$this->menu.tpl");
         return $html;

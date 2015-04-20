@@ -29,16 +29,12 @@ class HelpFile extends PEAR
      *
      * @param  int         Help file's ID
      * @return HelpFile
-     * @throws PEAR_Error
      * @access public
      */
     function &factory($helpID)
     {
         // create DB object
         $DB =& Database::singleton();
-        if (Utility::isErrorX($DB)) {
-            return PEAR::raiseError("Could not connect to database: ".$DB->getMessage());
-        }
 
         $obj = new HelpFile;
 
@@ -47,11 +43,7 @@ class HelpFile extends PEAR
         $result      = $DB->pselectRow(
             "SELECT helpID, parentID, hash, topic, COALESCE(projectContent, content) AS content,
                                    created, updated FROM help WHERE helpID = :HID", array('HID' => $helpID)
-        );
-        if (Utility::isErrorX($result)) {
-            return PEAR::raiseError("DB Error: ".$result->getMessage());
-        }
-
+                       );
         // set the help file
         $obj->data = $result;
 
@@ -64,7 +56,6 @@ class HelpFile extends PEAR
      *
      * @param  array       Associative array of values
      * @return int         New help file's ID
-     * @throws PEAR_Error
      * @access public
      * @static
      */
@@ -72,16 +63,9 @@ class HelpFile extends PEAR
     {
         // create DB object
         $DB =& Database::singleton();
-        if (Utility::isErrorX($DB)) {
-            return PEAR::raiseError("Could not connect to database: ".$DB->getMessage());
-        }
 
         // insert a help file
         $success = $DB->insert('help', $set);
-        if (Utility::isErrorX($success)) {
-            return PEAR::raiseError("DB Error: ".$success->getMessage());
-        }
-
         // return the help ID
         return $DB->lastInsertID;
     }
@@ -92,22 +76,15 @@ class HelpFile extends PEAR
      *
      * @param  array       Associative array of values
      * @return void
-     * @throws PEAR_Error
      * @access public
      */
     function update($set)
     {
         // create DB object
         $DB =& Database::singleton();
-        if (Utility::isErrorX($DB)) {
-            return PEAR::raiseError("Could not connect to database: ".$DB->getMessage());
-        }
 
         // update the help file
         $success = $DB->update('help', $set, array('helpID' => $this->helpID));
-        if (Utility::isErrorX($success)) {
-            return PEAR::raiseError("DB Error: ".$success->getMessage());
-        }
 
         return true;
     }
@@ -118,30 +95,20 @@ class HelpFile extends PEAR
      *
      * @param  array       Array of related help file IDs
      * @return void
-     * @throws PEAR_Error
      * @access public
      */
     function addLinks($relatedIDs)
     {
         // create DB object
         $DB =& Database::singleton();
-        if (Utility::isErrorX($DB)) {
-            return PEAR::raiseError("Could not connect to database: ".$DB->getMessage());
-        }
 
         // insert all related links
         if (is_array($relatedIDs)) {
             foreach ($relatedIDs as $relatedID) {
                 $success = $DB->insert('help_related_links', array('helpID' => $this->helpID, 'relatedID' => $relatedID));
-                if (Utility::isErrorX($success)) {
-                    return PEAR::raiseError("DB Error: ".$success->getMessage());
-                }
             }
         } else {
             $success = $DB->insert('help_related_links', array('helpID' => $this->helpID, 'relatedID' => $relatedIDs));
-            if (Utility::isErrorX($success)) {
-                return PEAR::raiseError("DB Error: ".$success->getMessage());
-            }
         }
 
         return true;
@@ -152,38 +119,22 @@ class HelpFile extends PEAR
      *
      * @param  array       Array of related help file IDs
      * @return void
-     * @throws PEAR_Error
      * @access public
      */
     function removeLinks($relatedIDs)
     {
         // create DB object
         $DB =& Database::singleton();
-        if (Utility::isErrorX($DB)) {
-            return PEAR::raiseError("Could not connect to database: ".$DB->getMessage());
-        }
 
         // delete the links
         if (is_array($relatedIDs)) {
             foreach($relatedIDs as $relatedID) {
                 $success = $DB->delete('help_related_links', array('helpID' => $this->helpID, 'relatedID' => $relatedID));
-                if (Utility::isErrorX($success)) {
-                    return PEAR::raiseError("DB Error: ".$success->getMessage());
-                }
                 $success = $DB->delete('help_related_links', array('helpID' => $relatedID, 'relatedID' => $this->helpID));
-                if (Utility::isErrorX($success)) {
-                    return PEAR::raiseError("DB Error: ".$success->getMessage());
-                }
             }
         } else {
             $success = $DB->delete('help_related_links', array('helpID' => $this->helpID, 'relatedID' => $relatedIDs));
-            if (Utility::isErrorX($success)) {
-                return PEAR::raiseError("DB Error: ".$success->getMessage());
-            }
             $success = $DB->delete('help_related_links', array('helpID' => $relatedIDs, 'relatedID' => $this->helpID));
-            if (Utility::isErrorX($success)) {
-                return PEAR::raiseError("DB Error: ".$success->getMessage());
-            }
         }
 
         return true;
@@ -195,32 +146,19 @@ class HelpFile extends PEAR
      *
      * @param  array       Array of related help file IDs
      * @return void
-     * @throws PEAR_Error
      * @access public
      */
     function updateLinks($relatedIDs)
     {
         // create DB object
         $DB =& Database::singleton();
-        if (Utility::isErrorX($DB)) {
-            return PEAR::raiseError("Could not connect to database: ".$DB->getMessage());
-        }
 
         // delete all related links
         $success = $DB->delete('help_related_links', array('helpID' => $this->helpID));
-        if (Utility::isErrorX($success)) {
-            return PEAR::raiseError("DB Error: ".$success->getMessage());
-        }
         $success = $DB->delete('help_related_links', array('relatedID' => $this->helpID));
-        if (Utility::isErrorX($success)) {
-            return PEAR::raiseError("DB Error: ".$success->getMessage());
-        }
 
         // add all the new links
         $success = $this->addLinks($relatedIDs);
-        if (Utility::isErrorX($success)) {
-            return PEAR::raiseError("HelpFile::updateLinks(): ".$success->getMessage());
-        }
 
         return true;
     }
@@ -230,22 +168,14 @@ class HelpFile extends PEAR
      * Returns whether or not the topic has subtopics
      *
      * @return bool
-     * @throws PEAR_Error
      * @access public
      */
     function hasChild()
     {
         // create DB object
         $DB =& Database::singleton();
-        if (Utility::isErrorX($DB)) {
-            return PEAR::raiseError("Could not connect to database: ".$DB->getMessage());
-        }
 
         $result = $DB->pselectOne("SELECT COUNT(*) FROM help WHERE parentID = :HID", array('HID' => $this->helpID));
-        if (Utility::isErrorX($result)) {
-            return PEAR::raiseError("DB Error: ".$result->getMessage());
-        }
-
         return ($result > 0);
     }
 
@@ -256,32 +186,21 @@ class HelpFile extends PEAR
      * @param  int         Stop at this depth
      * @param  int         Depth
      * @return array
-     * @throws PEAR_Error
      * @access public
      */
     function childIDs($stopat = 1, $level = 1)
     {
         // create DB object
         $DB =& Database::singleton();
-        if (Utility::isErrorX($DB)) {
-            return PEAR::raiseError("Could not connect to database: ".$DB->getMessage());
-        }
 
         // see if it has a child
         $hasChild = $this->hasChild();
-        if (Utility::isErrorX($hasChild)) {
-            return PEAR::raiseError("HelpFile::childIDs() children: ".$hasChild->getMessage());
-        }
 
         $childIDs = array();
 
         // get its children
         if ($hasChild) {
             $result = $DB->pselect("SELECT helpID FROM help WHERE parentID = :HID", array('HID' => $this->helpID));
-            if (Utility::isErrorX($result)) {
-                return PEAR::raiseError("DB Error: ".$result->getMessage());
-            }
-
             // add the children to the array
             $childIDs = Utility::reduce($result);
 
@@ -291,15 +210,8 @@ class HelpFile extends PEAR
                 foreach ($childIDs as $childID) {
                     // make the child
                     $child =& HelpFile::factory($childID);
-                    if (Utility::isErrorX($child)) {
-                        return PEAR::raiseError("HelpFile Error ($childID): ".$child->getMessage());
-                    }
-
                     // get the child's children
                     $grandChildIDs = $child->childIDs($stopat, $level + 1);
-                    if (Utility::isErrorX($grandChildIDs)) {
-                        return PEAR::raiseError("HelpFile::childIDs() grandchildren: ".$grandChildData->getMessage());
-                    }
 
                     // add the children to the array
                     $childIDs = array_merge($childIDs, $grandChildIDs);
@@ -323,19 +235,9 @@ class HelpFile extends PEAR
     {
         // create DB object
         $DB =& Database::singleton();
-        if (Utility::isErrorX($DB)) {
-            return PEAR::raiseError(
-                "Could not connect to database: ".$DB->getMessage()
-            );
-        }
 
         // see if it has a child
         $hasChild = $this->hasChild();
-        if (Utility::isErrorX($hasChild)) {
-            return PEAR::raiseError(
-                "HelpFile::childData() children: ".$hasChild->getMessage()
-            );
-        }
 
         $childData = array();
 
@@ -347,9 +249,6 @@ class HelpFile extends PEAR
                 WHERE parentID = :HID",
                 array('HID' => $this->helpID)
             );
-            if (Utility::isErrorX($result)) {
-                return PEAR::raiseError("DB Error: ".$result->getMessage());
-            }
 
             // add the children to the array
             $childData = $result;
@@ -360,21 +259,8 @@ class HelpFile extends PEAR
                 foreach ($childData as $row) {
                     // make the child
                     $child =& HelpFile::factory($row['helpID']);
-                    if (Utility::isErrorX($child)) {
-                        return PEAR::raiseError(
-                            "HelpFile Error (".$row['helpID']."): "
-                            .$child->getMessage()
-                        );
-                    }
-
                     // get the child's children
                     $grandChildData = $child->childData($stopat, $level + 1);
-                    if (Utility::isErrorX($grandChildData)) {
-                        return PEAR::raiseError(
-                            "HelpFile::childData() grandchildren: "
-                            .$grandChildData->getMessage()
-                        );
-                    }
 
                     // add the children to the array
                     $childData = array_merge($childData, $grandChildData);
@@ -406,20 +292,8 @@ class HelpFile extends PEAR
             if ($level != $stopat) {
                 // make the parent
                 $parent =& HelpFile::factory($this->data['parentID']);
-                if (Utility::isErrorX($parent)) {
-                    return PEAR::raiseError(
-                        "HelpFile Error (".$this->data['parentID']."): "
-                        .$parent->getMessage()
-                    );
-                }
-
                 // get the parent's parent
                 $grandParentIDs = $parent->parentIDs($stopat, $level + 1);
-                if (Utility::isErrorX($grandParentIDs)) {
-                    return PEAR::raiseError(
-                        "HelpFile::parentIDs(): ".$grandParentIDs->getMessage()
-                    );
-                }
 
                 // add the parents to the array
                 $parentIDs = array_merge($parentIDs, $grandParentIDs);
@@ -442,11 +316,6 @@ class HelpFile extends PEAR
     {
         // create DB object
         $DB =& Database::singleton();
-        if (Utility::isErrorX($DB)) {
-            return PEAR::raiseError(
-                "Could not connect to database: ".$DB->getMessage()
-            );
-        }
 
         $parentData = array();
 
@@ -457,9 +326,6 @@ class HelpFile extends PEAR
                  WHERE helpID = :HID",
                 array('HID' => $this->data['parentID'])
             );
-            if (Utility::isErrorX($result)) {
-                return PEAR::raiseError("DB Error: ".$result->getMessage());
-            }
 
             // add the parent to the array
             $parentData = $result;
@@ -468,20 +334,9 @@ class HelpFile extends PEAR
             if ($level != $stopat) {
                 // make the parent
                 $parent =& HelpFile::factory($this->data['parentID']);
-                if (Utility::isErrorX($parent)) {
-                    return PEAR::raiseError(
-                        "HelpFile Error (".$this->data['parentID']."): "
-                        .$parent->getMessage()
-                    );
-                }
 
                 // get the parent's parent
                 $grandParentData = $parent->parentData($stopat, $level + 1);
-                if (Utility::isErrorX($grandParentData)) {
-                    return PEAR::raiseError(
-                        "HelpFile::parentData(): ".$grandParentData->getMessage()
-                    );
-                }
 
                 $parentData = array_merge($parentData, $grandParentData);
             }
@@ -509,12 +364,6 @@ class HelpFile extends PEAR
         } else {
             // make the parent
             $parent =& HelpFile::factory($this->data['parentID']);
-            if (Utility::isErrorX($parent)) {
-                return PEAR::raiseError(
-                    "HelpFile Error (".$this->data['parentID']."): "
-                    .$parent->getMessage()
-                );
-            }
 
             return $parent->isDescendant($ancestor);
         }
@@ -526,18 +375,12 @@ class HelpFile extends PEAR
      * Returns an array of its related link's IDs
      *
      * @return array
-     * @throws PEAR_Error
      * @access public
      */
     function relationIDs()
     {
         // create DB object
         $DB =& Database::singleton();
-        if (Utility::isErrorX($DB)) {
-            return PEAR::raiseError(
-                "Could not connect to database: ".$DB->getMessage()
-            );
-        }
 
         $result = $DB->pselect(
             "SELECT helpID, relatedID
@@ -545,9 +388,6 @@ class HelpFile extends PEAR
             WHERE helpID = :HID OR relatedID = :HID ",
             array('HID' => $this->helpID)
         );
-        if (Utility::isErrorX($result)) {
-            return PEAR::raiseError("DB Error: ".$result->getMessage());
-        }
 
         // a multi-dimensional array is imploded, then exploded,
         // and then this topic's ID is removed
@@ -559,26 +399,15 @@ class HelpFile extends PEAR
      * Returns an array of its related links' IDs and topics
      *
      * @return array
-     * @throws PEAR_Error
      * @access public
      */
     function relationData()
     {
         // create DB object
         $DB =& Database::singleton();
-        if (Utility::isErrorX($DB)) {
-            return PEAR::raiseError(
-                "Could not connect to database: ".$DB->getMessage()
-            );
-        }
 
         // get the relation IDs
         $relationIDs = $this->relationIDs();
-        if (Utility::isErrorX($relationIDs)) {
-            return PEAR::raiseError(
-                "HelpFile::relationData(): ".$relationIDs->getMessage()
-            );
-        }
 
         // build the query using the IDs provided by the previous function
         $query = "SELECT helpID, topic FROM help WHERE 0";
@@ -589,10 +418,6 @@ class HelpFile extends PEAR
         }
 
         $DB->select($query, $result);
-        if (Utility::isErrorX($result)) {
-            return PEAR::raiseError("DB Error: ".$result->getMessage());
-        }
-
         return $result;
     }
 
@@ -610,28 +435,11 @@ class HelpFile extends PEAR
         // create DB object
         $DB =& Database::singleton();
 
-        // make sure a Database object exists
-        if (Utility::isErrorX($DB)) {
-            return PEAR::raiseError(
-                "Could not connect to database: ".$DB->getMessage()
-            );
-        }
-
         // get the parent IDs
         $parentIDs = $this->parentIDs($ancestor);
-        if (Utility::isErrorX($parentIDs)) {
-            return PEAR::raiseError(
-                "HelpFile::strangerData() parents: ".$parentIDs->getMessage()
-            );
-        }
 
         // get the child IDs
         $childIDs = $this->childIDs($descendant);
-        if (Utility::isErrorX($childIDs)) {
-            return PEAR::raiseError(
-                "HelpFile::strangerData() children: ".$childIDs->getMessage()
-            );
-        }
 
         // get all its descendants and ancestors, and I am not a stranger to myself!
         $familyIDs = array_merge($parentIDs, $childIDs, $this->helpID);
@@ -645,10 +453,6 @@ class HelpFile extends PEAR
         }
 
         $DB->select($query, $result);
-        if (Utility::isErrorX($result)) {
-            return PEAR::raiseError("DB Error: ".$result->getMessage());
-        }
-
         return $result;
     }
 
@@ -663,19 +467,9 @@ class HelpFile extends PEAR
     function tree($level = 0)
     {
         $DB =& Database::singleton();
-        if (Utility::isErrorX($DB)) {
-            return PEAR::raiseError(
-                "Could not connect to database: ".$DB->getMessage()
-            );
-        }
 
         // see if it has a child
         $hasChild = $this->hasChild();
-        if (Utility::isErrorX($hasChild)) {
-            return PEAR::raiseError(
-                "HelpFile::tree() children: ".$hasChild->getMessage()
-            );
-        }
 
         $tree = array();
 
@@ -686,9 +480,6 @@ class HelpFile extends PEAR
                  WHERE parentID = :HID",
                 array('HID' => $this->helpID)
             );
-            if (Utility::isErrorX($result)) {
-                return PEAR::raiseError("DB Error: ".$result->getMessage());
-            }
 
             // go one-by-one
             foreach ($result as $row) {
@@ -697,19 +488,8 @@ class HelpFile extends PEAR
 
                 // and go down another level!
                 $branch =& HelpFile::factory($row['helpID']);
-                if (Utility::isErrorX($branch)) {
-                    return PEAR::raiseError(
-                        "HelpFile Error (".$row['helpID']."): "
-                        .$result->getMessage()
-                    );
-                }
 
                 $twig = $branch->tree($level + 1);
-                if (Utility::isErrorX($twig)) {
-                    return PEAR::raiseError(
-                        "HelpFile::tree() branches: ".$twig->getMessage()
-                    );
-                }
 
                 $tree = array_merge($tree, $twig);
             }
@@ -723,7 +503,6 @@ class HelpFile extends PEAR
      * Dumps the HelpFile as an array
      *
      * @return array
-     * @throws PEAR_Error
      * @access public
      */
     function toArray()
@@ -747,19 +526,11 @@ class HelpFile extends PEAR
     {
         // create DB object
         $DB =& Database::singleton();
-        if (Utility::isErrorX($DB)) {
-            return PEAR::raiseError(
-                "Could not connect to database: ".$DB->getMessage()
-            );
-        }
 
         $helpID = $DB->pselectOne(
             "SELECT helpID FROM help WHERE hash = :HID",
             array('HID' => $hash)
         );
-        if (Utility::isErrorX($helpID)) {
-            return PEAR::raiseError("HelpFile::hashToID(): ".$helpID->getMessage());
-        }
 
         return $helpID;
     }

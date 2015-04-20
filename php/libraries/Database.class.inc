@@ -102,7 +102,7 @@ class Database extends PEAR
                 $connection = current($connections);
                 return $connection;
             } else {
-                return PEAR::raiseError('No database connection exists');
+                throw new DatabaseException("No database connection exists");
             }
         } else {
             // name the connection
@@ -120,7 +120,7 @@ class Database extends PEAR
                 );
                 if ($connections[$connection]->isError($ok)) {
                     unset($connections[$connection]);
-                    return PEAR::raiseError(
+                    throw new DatabaseException(
                         'Could not connect to database: '.$ok->getMessage()
                     );
                 }
@@ -183,12 +183,6 @@ class Database extends PEAR
             ." VALUES"
             ." (:histtable, :histcolumn, :newval, :oldval,"
             ." :primaryKeys, :primaryVals, :userID, :type)"
-        );
-
-        $this->_PDO = new PDO(
-            "mysql:host=$host;dbname=$database",
-            $username,
-            $password
         );
 
         if (is_null($this->_HistoryPDO)) {
@@ -270,8 +264,11 @@ class Database extends PEAR
         $prep   = $this->_PDO->prepare($prepQ);
         $result = $prep->execute($exec_params);
         if ($result === false) {
-            return $this->raiseError(
-                "Insert statement did not execute successfully."
+            throw new DatabaseException(
+                "Insert statement did not execute successfully: "
+                . print_r($prep->errorInfo(), true),
+                $prepQ,
+                $exec_params
             );
         }
 
@@ -353,8 +350,9 @@ class Database extends PEAR
         }
 
         if (preg_match("/=NULL/", $where)) {
-            return $this->raiseError(
-                "NULL values not allowed in a WHERE structure."
+            throw new DatabaseException(
+                "NULL values not allowed in a WHERE structure.",
+                $prepQ
             );
         }
 
@@ -367,8 +365,10 @@ class Database extends PEAR
         $prep   = $this->_PDO->prepare($prepQ);
         $result = $prep->execute($exec_params);
         if ($result === false) {
-            return $this->raiseError(
-                "Update statement did not execute successfully."
+            throw new DatabaseException(
+                "Update statement did not execute successfully.",
+                $prepQ,
+                $exec_params
             );
         }
         $this->affected = $prep->rowCount();
@@ -398,8 +398,9 @@ class Database extends PEAR
         }
 
         if (preg_match("/=NULL/", $query)) {
-            return $this->raiseError(
-                "NULL values not allowed in a WHERE structure."
+            throw new DatabaseException(
+                "NULL values not allowed in a WHERE structure.",
+                $query
             );
         }
 
@@ -407,11 +408,24 @@ class Database extends PEAR
         // one.
         $err = $this->_trackChanges($table, array(), $where, 'D');
         if ($this->isError($err)) {
-            return $err;
+            throw new DatabaseException(
+                "Unable to track changes for delete statement.",
+                $query,
+                $where
+            );
         }
 
         $this->_printQuery($query);
         $this->affected = $this->_PDO->exec($query);
+        if ($this->affected === false) {
+            throw new DatabaseException(
+                "Database DELETE did not execute successfully."
+                . print_r($this->_PDO->errorInfo(), true),
+                $query,
+                $where
+            );
+
+        }
     }
 
     /**
@@ -438,11 +452,10 @@ class Database extends PEAR
             && strpos(strtoupper($query), 'SHOW') !== 0
             && strpos(strtoupper($query), 'DESCRIBE') !== 0
         ) {
-            $result = $this->raiseError(
-                "Only SELECT statements can be run with Database::select()."
-                . "  Query was '$query'"
+            throw new DatabaseException(
+                "Only SELECT statements can be run with Database::select().",
+                $query
             );
-            return;
         }
 
         try {
@@ -456,8 +469,7 @@ class Database extends PEAR
             }
             return $result;
         } catch(Exception $e) {
-            $result = $this->raiseError("Invalid SELECT statement, $query");
-            return $result;
+            throw new DatabaseException("Invalid SELECT statement", $query);
         }
     }
 
@@ -556,7 +568,12 @@ class Database extends PEAR
     function execute($prepared, $params)
     {
         $execRun = $prepared->execute($params);
-        $rows    = $prepared->fetchAll(PDO::FETCH_ASSOC);
+        if ($execRun === false) {
+            $err = $prepared->errorInfo();
+            throw new DatabaseException($err[2], $prepared->queryString, $params);
+        }
+
+        $rows = $prepared->fetchAll(PDO::FETCH_ASSOC);
         return $rows;
     }
     /**
@@ -573,8 +590,9 @@ class Database extends PEAR
     function pselect($query, $params)
     {
         $this->_printQuery($query, $params);
-        $stmt = $this->prepare($query);
-        return $this->execute($stmt, $params);
+        $stmt   = $this->prepare($query);
+        $result = $this->execute($stmt, $params);
+        return $result;
     }
 
     /**
@@ -837,7 +855,9 @@ class Database extends PEAR
         if ($params) {
             $query = str_replace(array_keys($params), array_values($params), $query);
         }
-        print "$this->_databaseName: $query<br>\n";
+        print "$this->_databaseName:"
+            . date("j-M-Y G:i:s", time())
+            .": $query<br>\n";
     }
 
     /**

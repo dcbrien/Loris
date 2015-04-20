@@ -20,6 +20,14 @@
             </div>
             <div class="panel-body" id="panel-body">
                 <form method="post" name="mri_upload" id="mri_upload" enctype="multipart/form-data"> 
+
+                    <div class="row">
+                        {section name=error loop=$error_message}
+                                <div class="col-xs-12">
+                                    <label class="col-sm-12 error">{$error_message[error]}<br><br></label>
+                                </div>
+                      {/section}
+                    </div>
                     <div class="row">
                         {foreach from=$form.errors item=error}
                             <div class="col-xs-12">
@@ -29,8 +37,8 @@
                     </div>
                     <div class="row">
                         <div class="form-group col-sm-12">
-                            <label class="col-sm-12 col-md-4">{$form.mri_file.label}</label>
-                            <div class="col-sm-12 col-md-8">{$form.mri_file.html}</div>
+                            <label class="col-sm-4">{$form.mri_file.label}</label>
+                            <div class="col-sm-8">{$form.mri_file.html}</div>
                         </div>
                     </div>
                     <div class="row">
@@ -70,6 +78,9 @@
         </div>
     </div>
 </div>
+ 
+{*  This section is commented out because the functionality is not currently in the backend
+    This functionality is expected to be implemented in future releases of LORIS 
     <progress id="progressbar" value="0" max="100"></progress><span id="progresslabel"></span>
     
     <table>
@@ -89,6 +100,8 @@
         </tr>
     
     </table>
+
+*}
 <div class="row">
                 <table class ="dynamictable table table-hover table-primary table-bordered" border="0" width="100%">
                     <thead>
@@ -111,9 +124,14 @@
                             {section name=piece loop=$items[item]}
                           
                                 {if $items[item][piece].name eq 'Tarchive_Info'}
-                                    <td nowrap="nowrap"><a href="main.php?test_name=dicom_archive&subtest=viewDetails&
-                                    tarchiveID={$items[item][piece].value}">
-                                    View Details</a></td>
+                                    {if $items[item][piece].value}
+ 
+                                        <td nowrap="nowrap"><a href="main.php?test_name=dicom_archive&subtest=viewDetails&
+                                        tarchiveID={$items[item][piece].value}">
+                                        View Details</a></td>
+                                    {else}
+                                        <td nowrap="nowrap"> </td>
+                                    {/if} 
                                     
                                 {elseif $items[item][piece].name eq 'number_of_mincInserted'}     
                                 

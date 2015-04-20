@@ -15,11 +15,22 @@ function checkAccessProfileForm() {
     }
     return true;
 }
-function hideFilter() {
+function hideFilter(obj) {
     'use strict';
-    $("#panel-body").toggle();
-    $("#down").toggle();
-    $("#up").toggle();
+
+     var heading = $(obj);
+     var arrow = $(obj).children('.arrow');
+     if (heading.hasClass('panel-collapsed')) {
+            // expand the panel
+            heading.parents('.panel').find('.panel-body').slideDown();
+            heading.removeClass('panel-collapsed');
+            arrow.removeClass('glyphicon-chevron-down').addClass('glyphicon-chevron-up');
+        } else {
+            // collapse the panel
+            heading.parents('.panel').find('.panel-body').slideUp();
+            heading.addClass('panel-collapsed');
+            arrow.removeClass('glyphicon-chevron-up').addClass('glyphicon-chevron-down');
+        }
 }
 function toggleMe() {
     "use strict";
@@ -36,15 +47,30 @@ $(function(){
 	});
 });
 
-$(document).ready(function(){
-    $.getScript("js/modules/dynamic_table.table.js")
-        .done(function(){
-            Table.setup("content", "scrollRight", "scrollLeft");
-            Table.checkOverflow("content", "scrollRight", "scrollLeft");
+$(document).ready(function() {
+    // Filters will only get applied on a POST, so
+    // on click we need to fake a form which posts
+    // to the imaging_browser in order to get filters
+    $(".scanDoneLink").click(function(e) {
+        e.preventDefault();
+        var form = $('<form />', {
+            "action" : "main.php?test_name=imaging_browser",
+            "method" : "post"
         });
-    // checkOverflow();
-});
-$(window).resize(function(){
-    Table.checkOverflow("content", "scrollRight", "scrollLeft");
-    // checkOverflow();
+        var values = {
+            "reset" : "true",
+            "pscid" : this.dataset.pscid,
+            "filter" : "Show Data"
+        };
+
+        $.each(values, function(name, value) {
+            $("<input />", {
+                type: 'hidden',
+                name: name,
+                value: value
+            }).appendTo(form);
+        });
+
+        form.appendTo('body').submit();
+    });
 });
