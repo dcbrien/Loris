@@ -390,6 +390,7 @@ class User extends UserPermissions
                 PASSWORD_DEFAULT
             );
             $updateArray['Password_MD5']  = null;
+            //$updateArray['Password_MD5']  = User::MD5Salt($password);
         } else {
             $updateArray['Password_hash'] = null;
             $updateArray['Password_MD5']  = User::MD5Salt($password);
@@ -400,7 +401,7 @@ class User extends UserPermissions
         $config       =& NDB_Config::singleton();
         $couch_config = $config->getSetting("CouchDB");
         if ($couch_config['SyncAccounts'] === "true") {
-            $user->updateCouchUser($set['Password_md5']);
+            $this->updateCouchUser($password);
         }
     }
     /**
