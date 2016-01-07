@@ -25,7 +25,7 @@ function isEmpty(element) {
 
     if (element.val() === " ") {
         element.focus();
-        element.addClass('missing');
+        element.parent().addClass('has-error');
         $(".upload-error").show();
         return true;
     }
@@ -92,6 +92,9 @@ function postCategory() {
         type: "POST",
         data: $("#addCategoryForm").serialize(),
         success: function () {
+            $("#addCategoryModal").modal('hide');
+            $("#addCategoryCategory").removeClass("has-error");
+            $("#categoryAddError").hide();
             $('.add-success').show();
             setTimeout(function () {
                 $('.add-success').hide();
@@ -101,8 +104,9 @@ function postCategory() {
             }, 3000);
         },
         error: function (jqXHR, textStatus, errorThrown) {
-            if (jqXHR) {
-                console.log("Error: " + textStatus + " " + errorThrown);
+            if (jqXHR.status === 400) {
+                $("#addCategoryCategory").addClass("has-error");
+                $("#categoryAddError").show()
             }
         }
     });
@@ -128,7 +132,14 @@ function postEdit(id) {
         data: data,
         success: function() {
             $('.edit-success').show();
+            $("#editModal").modal('hide');
+            $("#editFileCategory").removeClass("has-error");
+            $("#categoryEditError").hide();
             setTimeout(function() { location.reload() }, 3000);
+        },
+        error: function() {
+            $("#editFileCategory").addClass("has-error");
+            $("#categoryEditError").show();
         }
     });
 }
@@ -159,7 +170,8 @@ function editModal() {
         }
     });
 
-    $("#postEdit").click(function(){
+    $("#postEdit").click(function(e){
+        e.preventDefault();
         postEdit(id);
     });
     $("#cancelEditButton").click(function() {
@@ -170,20 +182,19 @@ function editModal() {
 }
 
 function uploadForm() {
-    var elements = $(this).get(0).elements;
-    if(isEmpty($(elements).children("[name=category]"))) {
-        return false;
-    }
-    if(isEmpty($(elements).children("[name=site]"))) {
-        return false;
-    }
-    if(isFileEmpty($("[name=file]").get(0).files)) {
+    var elements = $(this).get(0).elements,
+        category_isEmpty = isEmpty($(elements).filter("[name=category]")),
+        site_isEmpty = isEmpty($(elements).filter("[name=site]")),
+        file_isEmpty = isFileEmpty($("[name=file]").get(0).files);
+    if(category_isEmpty || site_isEmpty || file_isEmpty) {
         return false;
     }
 }
 
 function renderTree(){
-    var fileDir = JSON.parse($("#json_data").html());
+    var fileDir = JSON.parse($("#json_data").html()),
+        filtered = JSON.parse($("#isFiltered").html()).filtered;
+
     for(var i in fileDir){
         if(fileDir[i]){
             var dir = fileDir[i];
@@ -193,38 +204,41 @@ function renderTree(){
             //new table layout
             var directory = $('#dir').html();
             Mustache.parse(directory);
-            var dirData = {
-                name: path[depth - 1],
-                id: path[depth - 1].replace(/[ >()]/g,"_"),
-                parentID: function(){
-                    if(depth >= 2)
-                     return path[depth - 2].replace(/[ >()]/g,"_");
-                    return null;
-                },
-                indent: function(){
-                    return (depth - 1)*60;
-                },
-                depth: function(){
-                    var depthArray = [];
-                    for (var i = 0; i < depth - 1; i++) {
-                        if(i === 0){
-                            var firstSpacer = {first: "dfg "}
-                            depthArray.push(firstSpacer);
-                        } else {
-                            depthArray.push(" ");
-                        }
-                    };
-                    return depthArray;
+            if(!filtered){
+                var dirData = {
+                    name: path[depth - 1],
+                    id: path[depth - 1].replace(/[^\w]/gi,"_"),
+                    Comment: dir.Comment,
+                    parentID: function(){
+                        if(depth >= 2)
+                         return path[depth - 2].replace(/[^\w]/gi,"_");
+                        return null;
+                    },
+                    indent: function(){
+                        return (depth - 1)*60;
+                    },
+                    depth: function(){
+                        var depthArray = [];
+                        for (var i = 0; i < depth - 1; i++) {
+                            if(i === 0){
+                                var firstSpacer = {first: "dfg "}
+                                depthArray.push(firstSpacer);
+                            } else {
+                                depthArray.push(" ");
+                            }
+                        };
+                        return depthArray;
+                    }
                 }
-            }
-            var renderDir = Mustache.render(directory, dirData);
+                var renderDir = Mustache.render(directory, dirData);
 
-            if(depth == 1) {
-                //new table layout
-                $("#dir-tree").append(renderDir);
-            } else {
-                //new table layout
-                $("#" + path[depth - 2].replace(/[ >()]/g,"_") + "a").after(renderDir);
+                if(depth == 1) {
+                    //new table layout
+                    $("#dir-tree").append(renderDir);
+                } else {
+                    //new table layout
+                    $("#" + path[depth - 2].replace(/[^\w]/gi,"_") + "a").after(renderDir);
+                }
             }
             var files = fileDir[i].Files;
             for(var ii in files) {
@@ -232,22 +246,28 @@ function renderTree(){
                 //new table layout
                 var file = $('#file').html();
                 Mustache.parse(file);   // optional, speeds up future uses
-                files[ii].indent = (depth)*60;
-                files[ii].parentID = path[depth - 1].replace(/[ >()]/g,"_");
-                files[ii].depth =   function(){
-                                        var depthArray = [];
-                                        for (var i = 0; i < depth; i++) {
-                                            if(i === 0){
-                                                var firstSpacer = {first: "dfg "}
-                                                depthArray.push(firstSpacer);
-                                            } else {
-                                                depthArray.push(" ");
-                                            }
-                                        };
-                                        return depthArray;
-                                    }
-                var renderedFile = Mustache.render(file, files[ii]);
-                $("#" + path[depth - 1].replace(/[ >()]/g,"_") + "a").after(renderedFile);
+                if(!filtered){
+                    files[ii].indent = (depth)*60;
+                    files[ii].parentID = path[depth - 1].replace(/[^\w]/gi,"_");
+                    files[ii].depth =   function(){
+                                            var depthArray = [];
+                                            for (var i = 0; i < depth; i++) {
+                                                if(i === 0){
+                                                    var firstSpacer = {first: "dfg "}
+                                                    depthArray.push(firstSpacer);
+                                                } else {
+                                                    depthArray.push(" ");
+                                                }
+                                            };
+                                            return depthArray;
+                                        }
+                    var renderedFile = Mustache.render(file, files[ii]);
+                    $("#" + path[depth - 1].replace(/[^\w]/gi,"_") + "a").after(renderedFile);
+                } else {
+                    files[ii].filtered = true;
+                    var renderedFile = Mustache.render(file, files[ii]);
+                    $("#dir-tree").append(renderedFile);
+                }
             }
         }
     }
@@ -289,9 +309,6 @@ function expandDir(key, value){
 $(document).ready(function () {
     "use strict";
 
-    renderTree();
-    editCategory();
-
     //Hide error and success messages on load
     $('.upload-success').hide();
     $('.delete-success').hide();
@@ -301,6 +318,8 @@ $(document).ready(function () {
     $('.file-error').hide();
     $('.no-files').hide();
 
+    renderTree();
+    editCategory();
 
     //Open confirmation dialog on Delete click
     var id;
@@ -339,4 +358,6 @@ $(document).ready(function () {
 
     $(".loading").hide();
     $(".directory").click(toggleDirectory);
+
+    $('.directory').popover({ trigger: "hover" });
 });

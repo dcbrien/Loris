@@ -29,13 +29,13 @@ class NDB_Menu_Filter_instrument_manager extends NDB_Menu_Filter
         );
 
         $writable = true;
-        if (!is_writeable($this->path . "project/instruments") || !is_writable($this->path . "project/tables_sql")) {
+        if (!is_writable($this->path . "project/instruments") || !is_writable($this->path . "project/tables_sql")) {
             $writable = false;
         } else {
             $writable = true;
         }
 
-        $this->tpl_data['writeable'] = $writable;
+        $this->tpl_data['writable'] = $writable;
 
         if($writable && $_POST['install'] == 'Install Instrument') {
             $db = Database::singleton();
@@ -50,14 +50,18 @@ class NDB_Menu_Filter_instrument_manager extends NDB_Menu_Filter
             if($exists <= 0) {
                 $db_config = $config->getSetting('database');
                 exec("php generate_tables_sql_and_testNames.php < $new_file");
-                exec("mysql -u" . escapeshellarg($db_config['quatUser']) 
-                                . " -p" . escapeshellarg($db_config['quatPassword']) 
-                                ." " . escapeshellarg($db_config['database'])  
-                                . " < " . $this->path . "project/tables_sql/$instname.sql");
-                $db->insert("test_names", array(
-                    "Test_name" => $instname,
-                    'Sub_group' => 0
-                ));
+
+                $instrument =& NDB_BVL_Instrument::factory(
+                    $instname,
+                    NULL,
+                    NULL
+                );
+
+                exec("mysql -u" . escapeshellarg($db_config['quatUser'])
+                    . " -p" . escapeshellarg($db_config['quatPassword'])
+                    . " " . escapeshellarg($db_config['database'])
+                    . " < " . $this->path . "project/tables_sql/".$instrument->table.".sql");
+
             }
         }
     }

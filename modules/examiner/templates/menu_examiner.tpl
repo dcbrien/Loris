@@ -48,7 +48,7 @@
             <div class="panel-body">
             {foreach from=$form.errors item=error}
             <div class="col-xs-12">
-                <p class="error">{$error}</p>
+                <div class="alert alert-danger" role="alert">{$error}</div>
             </div>
             {/foreach}
             <form method="post" name="examiner" id="examiner">
@@ -59,7 +59,7 @@
                     </div>
                     <div class="col-md-4">
                         <label>
-                            <input type="checkbox" name="addRadiologist" value="1"> Radiologist
+                            {$form.addRadiologist.html}
                         </label>
                     </div>
                 </div>

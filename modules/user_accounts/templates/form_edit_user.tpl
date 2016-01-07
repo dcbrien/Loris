@@ -1,6 +1,8 @@
 <br />
 {literal}
+<script type="text/javascript" src="js/invalid_form_scroll.js"></script>
 <script>
+
 $(document).ready(function() {
     function toggleGroup(group) {
         if(group) {
@@ -23,11 +25,10 @@ $(document).ready(function() {
         section = id.substring(7);
         section_el = $("#perms_" + section + " br:nth-child(1)").hide();
     });
-    
 });
 </script>
 {/literal}
-<form method="post" name="edit_user" >
+<form method="post" name="edit_user">
     {if $form.errors}
         <div class="alert alert-danger" role="alert">
             Please ensure that all required fields are filled
@@ -61,6 +62,7 @@ $(document).ready(function() {
         {else}
         <div class="row form-group form-inline form-inline">
         {/if}
+        {if $form.UserID_Group != null}
 	    	<label class="col-sm-12 col-sm-2 form-label">
                    {$form.UserID_Group.label}
             </label>
@@ -72,7 +74,16 @@ $(document).ready(function() {
                     <font class="form-error">{$form.errors.UserID_Group}</font>
                 </div>
             {/if}
-	    </div>
+        {else}
+	    	<label class="col-sm-12 col-sm-2 form-label">
+                   {$form.UserID.label}
+            </label>
+	    	<div class="col-sm-10">
+	    		{$form.UserID.html}
+	    	</div>
+        
+        {/if}
+	     </div>
     <!-- </div> -->
     <br>
     {if $form.errors.Password_Group}
@@ -293,6 +304,17 @@ $(document).ready(function() {
     		</div>
     	</div>
     </div>
+    <div class="row form-group form-inline">
+        <label class="col-sm-2">
+          {$form.Supervisors_Group.label}
+        </label>
+        <div class="col-sm-10 col-xs-12">
+          <div>
+            {$form.Supervisors_Group.html}
+          </div>
+        </div>
+     </div>
+
     <div class="row form-group form-inline">
     	<div class="col-sm-2">
     		<input class="btn btn-sm btn-primary col-xs-12" name="fire_away" value="Save" type="submit" />

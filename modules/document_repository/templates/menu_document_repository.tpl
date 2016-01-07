@@ -7,9 +7,21 @@
 <script id="json_data" type="text/json">
     {/literal}{$File_categories|json_encode}{literal}
 </script>
+<script id="isFiltered" type="text/json">
+    {
+        "filtered": {/literal}
+                        {if isset($filtered)}
+                            true
+                        {else}
+                            false
+                        {/if}
+                    {literal}
+    }
+</script>
+
 <script id="dir" type="x-tmpl-mustache">
     <tr id="{{ id }}a" {{ #parentID }}class="{{ parentID }}a directoryRow" style="display:none"{{ /parentID }}>
-        <td class="fileColumn">
+        <td class="fileColumn" colspan="10">
             {{ #depth }}
                 {{ #first }}
                     <div class="spacer" style="border-left: none;"> </div>
@@ -20,22 +32,21 @@
             {{ /depth }}
             {{ #indent }}
                 <div class="fileDDD">
-                    <span style="padding: 8px" class='directory glyphicon glyphicon-chevron-right'>
+                    <span style="padding: 8px" class='directory glyphicon glyphicon-chevron-right' data-container="body" data-toggle="popover" data-placement="right" data-content="{{ Comment }}">
                         {{ name }}
                     </span>
                 </div>
             {{ /indent }}
             {{ ^indent }}
-                <span style="padding: 8px" class='directory glyphicon glyphicon-chevron-right'>
+                <span style="padding: 8px" class='directory glyphicon glyphicon-chevron-right' data-container="body" data-toggle="popover" data-placement="right" data-content="{{ Comment }}">
                     {{ name }}
                 </span>
             {{ /indent }}
         </td>
-        <td colspan="9"></td>
     </tr>
 </script>
 <script id="file" type="x-tmpl-mustache">
-    <tr class="{{ parentID }}a" style="display:none">
+    <tr class="{{ parentID }}a fileRow" {{ ^filtered }}style="display:none" {{ /filtered }}>
         <td class="blah fileColumn">
             {{ #depth }}
                 {{ #first }}
@@ -45,7 +56,11 @@
                     <div class="spacer"> </div>
                 {{ /first }}
             {{ /depth }}
-            <div class="fileDDD"><div style="padding-top: 8px">{{ File_name }} ({{ File_size }})</div></div>
+            <div {{ ^filtered }}class="fileDDD"{{ /filtered }}><div style="padding-top: 8px">
+                <a href="AjaxHelper.php?Module=document_repository&script=GetFile.php&File={{ Data_dir }}" target="_blank" download="{{ File_name }}">
+                        {{ File_name }}
+                </a>({{ File_size }})
+            </div></div>
         </td>
         <td>
             {{ version }}
@@ -54,7 +69,7 @@
             {{ File_type }}
         </td>
         <td>
-            {{ instrument }}
+            {{ Instrument }}
         </td>
         <td>
             {{ uploaded_by }}
@@ -146,6 +161,40 @@
     <button class="btn btn-lg btn-primary loading"><span class="glyphicon glyphicon-refresh glyphicon-refresh-animate"></span> Loading...</button>
 </center>
 
+<div class = "upload-success">
+    <p>
+        <span class="ui-icon ui-icon-circle-check" style = "float:left;"></span>
+        The file was successfully uploaded. Loading changes in 3 seconds...
+    </p>
+</div>
+
+<div class = "edit-success">
+    <p>
+        <span class="ui-icon ui-icon-circle-check" style = "float:left;"></span>
+        The file was successfully modified. Loading changes in 3 seconds...
+    </p>
+</div>
+
+<div class = "delete-success">
+    <p>
+        <span class="ui-icon ui-icon-circle-check" style = "float:left;"></span>
+        The file was successfully deleted. Loading changes in 3 seconds...
+    </p>
+</div>
+
+<div class = "add-success">
+    <p>
+            <span class="ui-icon ui-icon-circle-check" style = "float:left;"></span>
+            New category successfully added! Loading changes in 3 seconds...
+    </p>
+</div>
+
+<div class = "no-files">
+    <p>
+        <span class="ui-icon ui-icon-info" style = "float:left;"></span>
+        No files were found.
+    </p>
+</div>
 
 {assign "find" array(' ','>','(',')')}
 {assign "replaceFind" array('_','_','_','_')}
@@ -203,12 +252,15 @@
                         <div class="col-xs-12">
                             <p>What category would you like to add?</p>
                         </div>
-                        <div class="col-xs-12 form-group">
+                        <div id="addCategoryCategory" class="col-xs-12 form-group">
                             <label class="col-xs-4">
-                                Category Name:
+                                Category Name:<font color="red"><sup> *</sup></font>
                             </label>
                             <div class="col-xs-8">
                                 <input type="text" name="category_name" class="form-control input-sm" />
+                            </div>
+                            <div id="categoryAddError" class="col-xs-8 col-xs-offset-4 form-error" style="display:none;">
+                                Category is required
                             </div>
                         </div>
                         <div class="col-xs-12 form-group">
@@ -237,7 +289,7 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" id="postCategory" role="button" aria-disabled="false" data-dismiss="modal">Add</button>
+                    <button type="button" class="btn btn-primary" id="postCategory" role="button" aria-disabled="false">Add</button>
                     <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
                 </div>
             </form>
@@ -292,7 +344,7 @@
                             </div>
                         </div>
                         <div class="col-xs-12 form-group">
-                            <label class="col-xs-4" for="instrument">Instrument<font color="red"><sup> *</sup></font></label>
+                            <label class="col-xs-4" for="instrument">Instrument</label>
                             <div class="col-xs-8">
                                 <select name="instrument" id = "instrument" class = "form-fields form-control input-sm">
                                 <option value=""> </option>
@@ -358,8 +410,8 @@
             <form name = "editForm" id = "editForm" method = "post">
                 <div class="modal-body">
                     <div class="row">
-                        <div class="col-xs-12 form-group">
-                            <label class="col-xs-4" for="category">Category</label>
+                        <div id="editFileCategory" class="col-xs-12 form-group">
+                            <label class="col-xs-4" for="category">Category<font color="red"><sup> *</sup></font></label>
                             <div class="col-xs-8">
                                 <select name="category" id = "categoryEdit" class = "form-fields form-control input-sm">
                                     <option value=""> </option>
@@ -369,6 +421,9 @@
                                         {/if}
                                     {/foreach}
                                 </select>
+                            </div>
+                            <div id="categoryEditError" class="col-xs-8 col-xs-offset-4 form-error" style="display:none;">
+                                Category is required
                             </div>
                         </div>
                         <div class="col-xs-12 form-group">
@@ -384,7 +439,7 @@
                         </div>
                         <div class="col-xs-12 form-group">
                             <label class="col-xs-4" for="instrument">
-                                Instrument<font color="red"><sup> *</sup></font>
+                                Instrument
                             </label>
                             <div class="col-xs-8">
                                 <select name="instrument" id = "instrumentEdit" class = "form-fields form-control input-sm">
@@ -422,48 +477,13 @@
                     </div>
                 </div>
                 <div class="modal-footer">
-                    <button class="btn btn-primary" id = "postEdit" role="button" aria-disabled="false" data-dismiss="modal">Edit</button>
+                    <button class="btn btn-primary" id = "postEdit" role="button" aria-disabled="false">Edit</button>
                     <button type="button" class="btn btn-default" data-dismiss="modal">Cancel</button>
                 </div>
                 <input type="hidden" name = "action" id = "actionEdit" value = "edit">
             </form>
         </div>
     </div>
-</div>
-
-<div class = "upload-success">
-    <p>
-	    <span class="ui-icon ui-icon-circle-check" style = "float:left;"></span>
-	    The file was successfully uploaded. Loading changes in 3 seconds...
-    </p>
-</div>
-
-<div class = "edit-success">
-    <p>
-	    <span class="ui-icon ui-icon-circle-check" style = "float:left;"></span>
-	    The file was successfully modified. Loading changes in 3 seconds...
-    </p>
-</div>
-
-<div class = "delete-success">
-    <p>
-	    <span class="ui-icon ui-icon-circle-check" style = "float:left;"></span>
-	    The file was successfully deleted. Loading changes in 3 seconds...
-    </p>
-</div>
-
-<div class = "add-success">
-    <p>
-            <span class="ui-icon ui-icon-circle-check" style = "float:left;"></span>
-            New category successfully added! Loading changes in 3 seconds...
-    </p>
-</div>
-
-<div class = "no-files">
-    <p>
-	    <span class="ui-icon ui-icon-info" style = "float:left;"></span>
-	    No files were found.
-    </p>
 </div>
 
 </br>

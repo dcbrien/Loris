@@ -77,7 +77,7 @@ class NDB_Menu_Filter_Imaging_Browser extends NDB_Menu_Filter
                 SELECT count(*) >= 1 
                 FROM files JOIN files_qcstatus 
                 USING (FileID) 
-                WHERE files.SessionID=s.ID AND files.AcquisitionProtocolID=54 and QCStatus='Pass'
+                WHERE files.SessionID=s.ID AND files.AcquisitionProtocolID=54 and (files_qcstatus.QCStatus=1 or files_qcstatus.QCStatus=2)
                 GROUP BY files.SessionID), '')
             WHEN '' THEN 'Failed'
             WHEN 1 THEN 'Passed'
@@ -88,7 +88,7 @@ class NDB_Menu_Filter_Imaging_Browser extends NDB_Menu_Filter
                 SELECT count(*) >= 1 
                 FROM files JOIN files_qcstatus 
                 USING (FileID) 
-                WHERE files.SessionID=s.ID AND files.AcquisitionProtocolID=58 and QCStatus='Pass'
+                WHERE files.SessionID=s.ID AND files.AcquisitionProtocolID=58 and (files_qcstatus.QCStatus=1 or files_qcstatus.QCStatus=2)
                 GROUP BY files.SessionID), '')
             WHEN '' THEN 'Failed'
             WHEN 1 THEN 'Passed'
@@ -176,6 +176,8 @@ class NDB_Menu_Filter_Imaging_Browser extends NDB_Menu_Filter
         );
         $this->EqualityFilters = array('f.AcquisitionProtocolID');
         $this->searchKeyword    = array();
+        
+        $this->tpl_data['numTimepoints'] = 0;
     }
 
     /**
@@ -220,7 +222,17 @@ class NDB_Menu_Filter_Imaging_Browser extends NDB_Menu_Filter
         $this->addBasicText(
             'DCCID', 'DCCID', array('size' => 10, "maxlength" => 25)
         );
-        $this->addSelect('ProjectID', 'Project', $allAr + Utility::getProjectList());
+
+        $config =& NDB_Config::singleton();
+        if ($config->getSetting('useProjects') === "true") {
+            $list_of_projects = $allAr;
+            $projectList = Utility::getProjectList();
+            foreach ($projectList as $key => $value) {
+                $list_of_projects[$key] =$value;
+            }
+            $this->addSelect('ProjectID', 'Project', $list_of_projects);  
+        }
+
         $this->addSelect('SiteID', 'Site', $list_of_sites);
         $this->addSelect(
             'VisitQCStatus',

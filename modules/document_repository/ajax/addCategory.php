@@ -10,6 +10,13 @@
  * @license  Loris license
  * @link     https://www.github.com/Jkat/Loris-Trunk/
  */
+
+$user =& User::singleton();
+if (!$user->hasPermission('document_repository_view') && !$user->hasPermission('document_repository_delete')) {
+    header("HTTP/1.1 403 Forbidden");
+    exit;
+}
+
 set_include_path(get_include_path().":../../project/libraries:../../php/libraries:");
 require_once "NDB_Client.class.inc";
 require_once "NDB_Config.class.inc";
@@ -26,7 +33,12 @@ if (Utility::isErrorX($DB)) {
     print "Could not connect to database: ".$DB->getMessage()."<br>\n"; die();
 }
 
-if ($_POST['category_name'] !== '') {
+
+
+if (empty($_POST['category_name']) && $_POST['category_name'] !== '0') {
+    header("HTTP/1.1 400 Bad Request");
+    exit;
+} else {
     $category_name = $_POST['category_name'];
 }
 if ($_POST['parent_id'] !== '') {

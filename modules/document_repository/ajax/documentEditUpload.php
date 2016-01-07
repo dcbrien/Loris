@@ -1,4 +1,11 @@
 <?php
+
+$userSingleton =& User::singleton();
+if (!$userSingleton->hasPermission('document_repository_view') && !$userSingleton->hasPermission('document_repository_delete')) {
+    header("HTTP/1.1 403 Forbidden");
+    exit;
+}
+
 set_include_path(get_include_path().":../../project/libraries:../../php/libraries:");
 require_once "NDB_Client.class.inc";
 require_once "NDB_Config.class.inc";
@@ -16,7 +23,6 @@ if (Utility::isErrorX($DB)) {
 
 $action = $_POST['action'];
 
-$userSingleton =& User::singleton();
 if (Utility::isErrorX($userSingleton)) {
     return PEAR::raiseError("User Error: ".$userSingleton->getMessage());
 }
@@ -77,6 +83,11 @@ if ($userSingleton->hasPermission('document_repository_view') || $userSingleton-
         $visit = $_POST['visitEdit'];
         $comments = $_POST['commentsEdit'];
         $version = $_POST['versionEdit'];
+
+        if(empty($category) && $category !== '0'){
+            header("HTTP/1.1 400 Bad Request");
+            exit;
+        }
 
         $values = array('File_category' => $category, 'Instrument' => $instrument, 'For_site' => $site,
                         'PSCID' => $pscid, 'visitLabel' => $visit, 'comments' => $comments, 'version' => $version);

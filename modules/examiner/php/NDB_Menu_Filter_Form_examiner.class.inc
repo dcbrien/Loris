@@ -153,6 +153,7 @@ class NDB_Menu_Filter_Form_Examiner extends NDB_Menu_Filter_Form
 
         // add examiner form elements
         $this->addBasicText('addName', 'Name');
+        $this->addCheckbox('addRadiologist', 'Radiologist', array('value' => '1'));
         $this->addSelect('addSite', 'Site', $sites);
 
         $this->form->addFormRule(array(&$this, '_validateAddExaminer'));
@@ -287,6 +288,10 @@ class NDB_Menu_Filter_Form_Examiner extends NDB_Menu_Filter_Form
         $fullName    = $values['addName'];
         $siteID      = $values['addSite'];
         $radiologist = $values['addRadiologist'];
+        //$values['addRadiologist'] should be used once addCheckbox is
+        // supported by LorisForm and once addRadiologist checkbox is added
+        // to the form using the addCheckbox method
+        //$radiologist = $values['addRadiologist'];
 
         $DB->insert(
             'examiners',
@@ -296,6 +301,7 @@ class NDB_Menu_Filter_Form_Examiner extends NDB_Menu_Filter_Form
              'radiologist' => $radiologist,
             )
         );
+        header("Location: main.php?test_name=examiner", true, 303);
     }
 
     /**

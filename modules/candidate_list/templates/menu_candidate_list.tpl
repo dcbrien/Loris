@@ -5,6 +5,7 @@
     });
 </script>
 {/literal}
+<script type="text/javascript" src="{$baseurl}/js/advancedMenu.js"></script>
 
 <div class="row">
 <div class="col-sm-9">
@@ -43,6 +44,7 @@
                 </div>
             </div>
             <div class="row">
+                {if count($form.centerID.options) > 1}
                 <div class="form-group col-sm-4">
                     <label class="col-sm-12 col-md-4">
                         {$form.centerID.label}
@@ -51,6 +53,7 @@
                         {$form.centerID.html}
                     </div>
                 </div>
+                {/if}
                 <div class="form-group col-sm-4">
                     <label class="col-sm-12 col-md-4">
                         {$form.SubprojectID.label}
@@ -188,14 +191,14 @@
         <span class="glyphicon arrow glyphicon-chevron-up pull-right"></span>
     </div>
     <div class="panel-body" id="panel-body">
-    <form class="form-horizontal" name="accessProfileForm" method="get" action="main.php" onSubmit="return checkAccessProfileForm();">
+    <form class="form-horizontal" id="accessProfileForm" name="accessProfileForm" method="get" action="main.php">
         <input type="hidden" name="test_name" value="timepoint_list">
         <div class="form-group col-sm-12">
             <label class="col-sm-12 col-md-4">
-                {$form.DCCID.label}
+                {$form.candID.label}
             </label>
             <div class="col-sm-12 col-md-8">
-                {$form.DCCID.html}
+                {$form.candID.html}
             </div>
         </div>
         <div class="form-group col-sm-12">
@@ -217,7 +220,12 @@
 <table border="0" valign="bottom" width="100%">
 <tr>
     <!-- title -->
-    <td class="controlPanelSection">{$numCandidates} subject(s) selected.</td>
+    <td class="controlPanelSection">
+        {$numCandidates} subject(s) selected. 
+        <a href="{$csvUrl}" download="{$csvFile}.csv">
+            Download as CSV
+        </a>
+    </td>
     <!-- display pagination links -->
     <td align="right">{$page_links}</td>
 </tr>
@@ -253,7 +261,7 @@
                 {elseif $items[item][piece].name == "scan_Done"}
                     {if $items[item][piece].value == 'Y'}
                         {assign var="scan_done" value="Yes"}
-                        <a href="{$baseurl}/main.php?test_name=imaging_browser&pscid={$PSCID}&filter=Show%20Data">{$scan_done}</a>
+                        <a class="scanDoneLink" data-pscid="{$PSCID}" href="{$baseurl}/main.php?test_name=imaging_browser&pscid={$PSCID}&filter=Show%20Data">{$scan_done}</a>
                     {else}
                         {assign var="scan_done" value="No"}
                         {$scan_done}

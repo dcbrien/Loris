@@ -37,6 +37,7 @@ class NDB_Page
 
     /**
      * Reference to the HTML QuickForm
+     * @var LorisForm
      */
     var $form;
 
@@ -154,7 +155,7 @@ class NDB_Page
 
 
     /**
-     * Adds a text element to the current page with no accompagnying
+     * Adds a text element to the current page with no accompanying
      * not answered option
      *
      * @param string $field   The name of the text element to add
@@ -170,7 +171,7 @@ class NDB_Page
     }
 
     /**
-     * Adds a text area to the current page with no accompagnying not answered
+     * Adds a text area to the current page with no accompanying not answered
      * option.
      *
      * @param string $field          The name of the text area to add
@@ -192,7 +193,7 @@ class NDB_Page
     }
 
     /**
-     * Adds a date field (without an accompagnying not answered option) to the
+     * Adds a date field (without an accompanying not answered option) to the
      * current page.
      *
      * @param string $field   The name of the date field
@@ -212,6 +213,27 @@ class NDB_Page
               )
     ) {
         $this->form->addElement('date', $field, $label, $options, $attr);
+    }
+
+    /**
+     * Wrapper to create a checkbox
+     *
+     * @param string $name     The field name of this checkbox
+     * @param string $label    The label to attach to this checkbox
+     * @param array  $options  Options to pass to QuickForm for this
+     *                         checkbox
+     * @param array  $optional Optional extra HTML attributes to add
+     *                         to the checkbox
+     *
+     * @return none
+     */
+    function addCheckbox($name, $label, $options, $optional=array())
+    {
+        $optional = array_merge(
+            array('class' => 'form-control input-sm'),
+            $optional
+        );
+        $this->form->addElement('advcheckbox', $name, $label, $options, $optional);
     }
 
     /**
@@ -421,22 +443,13 @@ class NDB_Page
      */
     function createCheckbox($field, $label, $options=null, $closer='</label>')
     {
-        $group   = array();
-        $group[] = $this->form->createElement('static', null, null, '<label>');
-        $group[] = $this->form->createElement(
-            'advcheckbox',
+        return $this->form->createElement(
+            "advcheckbox",
             $field,
-            null,
-            null,
-            $options
+            $label,
+            $options,
+            array()
         );
-        $group[] = $this->form->createElement(
-            'static',
-            'checkLabel',
-            null,
-            $label.$closer
-        );
-        return $group;
     }
 
     /**
