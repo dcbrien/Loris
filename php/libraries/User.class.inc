@@ -416,7 +416,6 @@ class User extends UserPermissions
                 PASSWORD_DEFAULT
             );
             $updateArray['Password_MD5']  = null;
-            //$updateArray['Password_MD5']  = User::MD5Salt($password);
         } else {
             $updateArray['Password_hash'] = null;
             $updateArray['Password_MD5']  = User::MD5Salt($password);

@@ -100,7 +100,7 @@ class NDB_Menu_Filter_Resolved_Conflicts extends NDB_Menu_Filter
             array(
              'candidate.PSCID',
              'session.CandID',
-             'conflicts_resolved.Fieldname',
+             'conflicts_unresolved.Fieldname',
             )
         );
 
@@ -138,7 +138,7 @@ class NDB_Menu_Filter_Resolved_Conflicts extends NDB_Menu_Filter
             array(
              'CandID'   => 'session.CandID',
              'PSCID'    => 'candidate.PSCID',
-             'Question' => 'conflicts_resolved.Fieldname',
+             'Question' => 'conflicts_unresolved.Fieldname',
             )
         );
         return true;
